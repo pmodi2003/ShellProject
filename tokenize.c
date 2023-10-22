@@ -2,11 +2,11 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define MAX_TOKENS 100
+// #define MAX_TOKENS 100
 #define MAX_TOKEN_LENGTH 255
 
 char **tokenize(char *input) {
-    char **tokens = (char **)malloc(MAX_TOKENS * sizeof(char *));
+    char **tokens = (char **)malloc(MAX_TOKEN_LENGTH * sizeof(char *));
     char *token = strtok(input, " \t\n");
     int token_idx = 0;
 
