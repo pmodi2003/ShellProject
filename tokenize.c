@@ -1,42 +1,44 @@
-#include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
-char **tokenize(const char *input){
-  char **tokens = NULL;
-  int token_count = 0;
+#define MAX_TOKENS 100
+#define MAX_TOKEN_LENGTH 255
 
-  char *token = strtok(strdup(input), " \t\n");
+char **tokenize(char *input) {
+	char **tokens = (char **)malloc(MAX_TOKENS * sizeof(char *));
+	char *token = strtok(input, " \t\n");
+	int token_index = 0;
 
-  while(token != NULL){
-    token_count++;
-    tokens = realloc(tokens, token_count * sizeof(char*));
-    tokens[token_count-1] = strdup(token);
-    token = strtok(NULL, " \t\n");
-  }
+	while (token != NULL) {
+		tokens[token_index] = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
+		strcpy(tokens[token_index], token);
+		token_index++;
+		token = strtok(NULL, " \t\n");
+	}
 
-  tokens = realloc(tokens, (token_count+1) * sizeof(char*));
-  tokens[token_count] = NULL;
-
-  return tokens;
-
+	tokens[token_index] = NULL;
+	return tokens;
 }
 
-int main(int argc, char **argv) {
-  char *input = NULL;
-  size_t input_size = 256;
-
-  if(getline(&input, &input_size, stdin) != -1){
-    char **tokens = tokenize(input);
-
-    for (int i = 0; tokens[i] != NULL; i++) {
-      printf("%s\n", tokens[i]);
-    }
-
-  } else {
-    printf("Error Reading Input.\n");
-  }
-
-  return 0;
-
+void free_tokens(char **tokens) {
+	for (int i = 0; tokens[i] != NULL; i++) {
+		free(tokens[i]);
+	}
+	free(tokens);
 }
+
+int main() {
+	char input[MAX_TOKEN_LENGTH];
+	fgets(input, MAX_TOKEN_LENGTH, stdin);
+
+	char **tokens = tokenize(input);
+
+	for (int i = 0; tokens[i] != NULL; i++) {
+		printf("%s\n", tokens[i]);
+	}
+
+	free_tokens(tokens);
+	return 0;
+}
+
