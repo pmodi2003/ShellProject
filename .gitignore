@@ -10,3 +10,5 @@ dmypy.json
 
 # vim
 .*.swp
+.*.exe
+.*.o
