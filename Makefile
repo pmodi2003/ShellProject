@@ -1,8 +1,8 @@
 CC=gcc
 CFLAGS=-g -std=c11
 
-TOKENIZE_OBJS=$(patsubst %.c,%.o,$(filter-out shell.c,$(wildcard *.c)))
 SHELL_OBJS=$(patsubst %.c,%.o,$(filter-out tokenize.c,$(wildcard *.c)))
+TOKENIZE_OBJS=$(patsubst %.c,%.o,$(filter-out shell.c,$(wildcard *.c)))
 
 ifeq ($(shell uname), Darwin)
 	LEAKTEST ?= leaks --atExit --
@@ -27,12 +27,11 @@ clean:
 	rm -rf *.o
 	rm -f shell tokenize
 
-shell: $(SHELL_OBJS)
+shell: $(SHELL_OBJS) tokenize.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-tokenize: $(TOKENIZE_OBJS)
+tokenize: $(TOKENIZE_OBJS) shell.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $^
-
