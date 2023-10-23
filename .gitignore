@@ -9,6 +9,7 @@ __pycache__/
 dmypy.json
 
 # vim
-.*.swp
-.*.exe
-.*.o
+*.swp
+shell
+tokenize
+*.o
