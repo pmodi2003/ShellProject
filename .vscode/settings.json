@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "tokenize.h": "c",
+        "unistd.h": "c",
+        "types.h": "c"
     }
 }

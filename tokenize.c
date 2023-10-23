@@ -1,9 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-// #define MAX_TOKENS 100
-#define MAX_TOKEN_LENGTH 255
+#include "tokenize.h"
 
 char **tokenize(char *input) {
     char **tokens = (char **)malloc(MAX_TOKEN_LENGTH * sizeof(char *));
@@ -49,16 +47,16 @@ void free_tokens(char **tokens) {
     free(tokens);
 }
 
-int main() {
-    char input[MAX_TOKEN_LENGTH];
-    fgets(input, MAX_TOKEN_LENGTH, stdin);
+// int main() {
+//     char input[MAX_TOKEN_LENGTH];
+//     fgets(input, MAX_TOKEN_LENGTH, stdin);
 
-    char **tokens = tokenize(input);
+//     char **tokens = tokenize(input);
 
-    for (int i = 0; tokens[i] != NULL; i++) {
-        printf("%s\n", tokens[i]);
-    }
+//     for (int i = 0; tokens[i] != NULL; i++) {
+//         printf("%s\n", tokens[i]);
+//     }
 
-    free_tokens(tokens);
-    return 0;
-}
+//     free_tokens(tokens);
+//     return 0;
+// }
