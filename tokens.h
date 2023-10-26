@@ -1,5 +1,5 @@
-#ifndef TOKENIZE_H
-#define TOKENIZE_H
+#ifndef TOKENS_H
+#define TOKENS_H
 
 #define MAX_TOKEN_LENGTH 255
 

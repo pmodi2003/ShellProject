@@ -5,7 +5,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include "tokenize.h"
+#include "tokens.h"
 
 int main(int argc, char **argv) {
     printf("Welcome to mini-shell.\n");
