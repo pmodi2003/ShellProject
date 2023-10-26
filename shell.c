@@ -11,6 +11,7 @@ int main(int argc, char **argv) {
     printf("Welcome to mini-shell.\n");
 
     char input[MAX_TOKEN_LENGTH];
+    char **tokens = NULL;
 
     while (1) {
         printf("shell $ ");
@@ -27,8 +28,15 @@ int main(int argc, char **argv) {
             printf("Bye bye.\n");
             break; 
         }
-
-        char **tokens = tokenize(input);
+	
+	if (strcmp(input, "prev") != 0) {
+	    tokens = tokenize(input);
+	} else {
+	    if (tokens == NULL){
+  	        printf("No previous commands!\n");
+	        continue;
+	    }
+	}
         
         pid_t pid = fork();
         if (pid == 0) {

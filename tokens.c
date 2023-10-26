@@ -13,14 +13,14 @@ char **tokenize(char *input) {
         if (token[0] == '"') {
             char *result = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
             if (result == NULL) {
-                fprintf(stderr, "Memory allocation failed");
+                fprintf(stderr, "Memory allocation failed\n");
                 exit(1);
             }
             strcpy(result, token + 1);
             while (token[strlen(token) - 1] != '"') {
                 token = strtok(NULL, " \t\n");
                 if (token == NULL) {
-                    fprintf(stderr, "No closing quote found");
+                    fprintf(stderr, "No closing quote found\n");
                     exit(1);
                 }
                 strcat(result, " ");  
