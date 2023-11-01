@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
+
 #include "tokens.h"
 
 int main() {
@@ -8,6 +10,8 @@ int main() {
     fgets(input, MAX_TOKEN_LENGTH, stdin);
 
     char **tokens = tokenize(input);
+
+    assert(tokens != NULL);
 
     for (int i = 0; tokens[i] != NULL; i++) {
         printf("%s\n", tokens[i]);
