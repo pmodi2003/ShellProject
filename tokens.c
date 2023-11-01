@@ -21,8 +21,12 @@ char **tokenize(char *input) {
                 token = strtok(NULL, " \t\n");
                 if (token == NULL) {
                     fprintf(stderr, "No closing quote found\n");
-                    exit(1);
-                }
+                    char **error_token = (char **)malloc(2 * sizeof(char *));
+                    error_token[0] = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
+                    strcpy(error_token[0], "<error>");
+                    error_token[1] = NULL;
+                    return error_token;
+		}
                 strcat(result, " ");  
                 strcat(result, token);
             }

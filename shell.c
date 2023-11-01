@@ -35,7 +35,35 @@ int main(int argc, char **argv) {
 	    if (tokens == NULL){
   	        printf("No previous commands!\n");
 	        continue;
+	    } else {
+		int token_idx = 0;
+		while(tokens[token_idx] != NULL) {
+		    printf("%s ", tokens[token_idx]);
+		    token_idx++;
+	    	}
+		printf("\n");
 	    }
+	}
+
+        if (strcmp(tokens[0], "<error>") == 0) {
+            free_tokens(tokens);
+            continue; 
+        }
+	
+	if (strcmp(tokens[0], "cd") == 0) {
+	    if(chdir(tokens[1]) == -1){
+		if(tokens[1] == NULL || strcmp(tokens[1], "~") == 0){
+		    chdir("/home/user");
+		} else {
+		    char *directory = (char *)malloc(sizeof(char) * (strlen(tokens[1])+1));
+		    strcpy(directory, "/");
+		    strcat(directory, tokens[1]);
+		    if (chdir(directory) == -1) { 
+		        printf("Error changing directory\n");
+		    }
+		}
+	    }
+	    continue;
 	}
         
         pid_t pid = fork();
