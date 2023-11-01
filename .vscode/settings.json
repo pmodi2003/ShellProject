@@ -3,6 +3,7 @@
         "stdlib.h": "c",
         "tokenize.h": "c",
         "unistd.h": "c",
-        "types.h": "c"
+        "types.h": "c",
+        "string.h": "c"
     }
 }
