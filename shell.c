@@ -20,15 +20,16 @@ int main(int argc, char **argv) {
             break;  
         }
 
+
         if (input[strlen(input) - 1] == '\n') {
             input[strlen(input) - 1] = '\0';
         }
+
 
         if (strcmp(input, "exit") == 0) {
             printf("Bye bye.\n");
             break; 
         }
-
     
         
         if (strcmp(input, "prev") != 0) {
@@ -47,11 +48,13 @@ int main(int argc, char **argv) {
             }
         }
 
+
         if (strcmp(tokens[0], "<error>") == 0) {
             free_tokens(tokens);
             continue; 
         }
 	
+
         if (strcmp(tokens[0], "cd") == 0) {
             if(chdir(tokens[1]) == -1){
             if(tokens[1] == NULL || strcmp(tokens[1], "~") == 0){
@@ -104,7 +107,27 @@ int main(int argc, char **argv) {
             fclose(file);
             continue;
         }
+
+
+	if (strcmp(tokens[0], "help") == 0) {
+	    if (tokens[1] == NULL) {
+                printf("Help command requires a built-in command argument\n"
+                       "Built-in Arguments:\n	exit\n	prev\n	cd\n	source\n	help\n");
+	    } else if (strcmp(tokens[1], "exit") == 0){
+		printf("Exit Command Help\n");
+	    } else if (strcmp(tokens[1], "prev") == 0) {
+		printf("Prev Command Help\n");
+	    } else if (strcmp(tokens[1], "cd") == 0) {
+                printf("CD Command Help\n");
+	    } else if (strcmp(tokens[1], "source") == 0) {
+                printf("Source Command Help\n");
+	    } else if (strcmp(tokens[1], "help") == 0) {
+                printf("Help Command Help\n");
+	    }
+	    continue;
+	}
         
+
         pid_t pid = fork();
         if (pid == 0) {
             if (execvp(tokens[0], tokens) == -1) {
