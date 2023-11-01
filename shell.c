@@ -114,15 +114,26 @@ int main(int argc, char **argv) {
                 printf("Help command requires a built-in command argument\n"
                        "Built-in Arguments:\n	exit\n	prev\n	cd\n	source\n	help\n");
 	    } else if (strcmp(tokens[1], "exit") == 0){
-		printf("Exit Command Help\n");
+		printf("exit: exit\n"
+			"	Exit the shell.\n");
 	    } else if (strcmp(tokens[1], "prev") == 0) {
-		printf("Prev Command Help\n");
+		printf("prev: prev\n"
+			"	Change the shell working directory.\n\n"
+			"	Change the current directory to DIR.  The default DIR is the value of the HOME shell variable.\n");
 	    } else if (strcmp(tokens[1], "cd") == 0) {
-                printf("CD Command Help\n");
+                printf("cd: cd [dir]\n"
+			"	Change the shell working directory.\n\n"
+			"	Change the current directory to DIR. The default DIR is the value of the HOME shell variable.\n");
 	    } else if (strcmp(tokens[1], "source") == 0) {
-                printf("Source Command Help\n");
+                printf("source: source filename\n"
+			"	Execute commands from a file in the current shell.\n\n"
+			"	Read and execute commands from FILENAME in the current shell.\n");
 	    } else if (strcmp(tokens[1], "help") == 0) {
-                printf("Help Command Help\n");
+                printf("help: help [command]\n"
+			"	Display information about builtin commands.\n\n"
+			"	Displays brief summaries of builtin commands.\n");
+	    } else {
+		printf("%s is not a built-in command!\n", tokens[1]);
 	    }
 	    continue;
 	}
