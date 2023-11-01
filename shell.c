@@ -28,43 +28,82 @@ int main(int argc, char **argv) {
             printf("Bye bye.\n");
             break; 
         }
-	
-	if (strcmp(input, "prev") != 0) {
-	    tokens = tokenize(input);
-	} else {
-	    if (tokens == NULL){
-  	        printf("No previous commands!\n");
-	        continue;
-	    } else {
-		int token_idx = 0;
-		while(tokens[token_idx] != NULL) {
-		    printf("%s ", tokens[token_idx]);
-		    token_idx++;
-	    	}
-		printf("\n");
-	    }
-	}
+
+    
+        
+        if (strcmp(input, "prev") != 0) {
+            tokens = tokenize(input);
+        } else {
+            if (tokens == NULL){
+                printf("No previous commands!\n");
+                continue;
+            } else {
+            int token_idx = 0;
+            while(tokens[token_idx] != NULL) {
+                printf("%s ", tokens[token_idx]);
+                token_idx++;
+                }
+            printf("\n");
+            }
+        }
 
         if (strcmp(tokens[0], "<error>") == 0) {
             free_tokens(tokens);
             continue; 
         }
 	
-	if (strcmp(tokens[0], "cd") == 0) {
-	    if(chdir(tokens[1]) == -1){
-		if(tokens[1] == NULL || strcmp(tokens[1], "~") == 0){
-		    chdir("/home/user");
-		} else {
-		    char *directory = (char *)malloc(sizeof(char) * (strlen(tokens[1])+1));
-		    strcpy(directory, "/");
-		    strcat(directory, tokens[1]);
-		    if (chdir(directory) == -1) { 
-		        printf("Error changing directory\n");
-		    }
-		}
-	    }
-	    continue;
-	}
+        if (strcmp(tokens[0], "cd") == 0) {
+            if(chdir(tokens[1]) == -1){
+            if(tokens[1] == NULL || strcmp(tokens[1], "~") == 0){
+                chdir("/home/user");
+            } else {
+                char *directory = (char *)malloc(sizeof(char) * (strlen(tokens[1])+1));
+                strcpy(directory, "/");
+                strcat(directory, tokens[1]);
+                if (chdir(directory) == -1) { 
+                    printf("Error changing directory\n");
+                }
+            }
+            }
+            continue;
+        }
+
+
+        if (strcmp(tokens[0], "source") == 0) {
+            if (tokens[1] == NULL) {
+                printf("source: filename argument required\n");
+                continue;
+            }
+
+            FILE *file = fopen(tokens[1], "r");
+            if (file == NULL) {
+                perror("source");
+                continue;
+            }
+
+            char script_line[MAX_TOKEN_LENGTH];
+            while (fgets(script_line, MAX_TOKEN_LENGTH, file) != NULL) {
+                if (script_line[strlen(script_line) - 1] == '\n') {
+                    script_line[strlen(script_line) - 1] = '\0';
+                }
+
+                char **script_tokens = tokenize(script_line);
+                pid_t pid = fork();
+                if (pid == 0) {
+                    if (execvp(script_tokens[0], script_tokens) == -1) {
+                        fprintf(stderr, "%s: command not found\n", script_tokens[0]);
+                        exit(1);
+                    }
+                } else {
+                    waitpid(pid, NULL, 0);
+                }
+
+                free_tokens(script_tokens);
+            }
+
+            fclose(file);
+            continue;
+        }
         
         pid_t pid = fork();
         if (pid == 0) {
