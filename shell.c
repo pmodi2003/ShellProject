@@ -8,6 +8,8 @@
 #include "tokens.h"
 
 #define MAX_COMMANDS 100
+static char *prev = NULL;
+
 
 void execute_commands(char *command) {
     char **tokens = NULL;
@@ -19,11 +21,15 @@ void execute_commands(char *command) {
 
     if (strcmp(command, "prev") != 0) {
         tokens = tokenize(command);
+	free(prev);
+	prev = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
+	strcpy(prev, command);
     } else {
-        if (tokens == NULL) {
+        if (prev == NULL) {
             printf("No previous commands!\n");
             return;
         } else {
+	    tokens = tokenize(prev);
             int token_idx = 0;
             while (tokens[token_idx] != NULL) {
                 printf("%s ", tokens[token_idx]);
@@ -142,7 +148,6 @@ int main(int argc, char **argv) {
 
     char input[MAX_TOKEN_LENGTH];
     char *commands[MAX_COMMANDS];
-
     while (1) {
         printf("shell $ ");
         if (fgets(input, MAX_TOKEN_LENGTH, stdin) == NULL) {
@@ -166,6 +171,5 @@ int main(int argc, char **argv) {
             execute_commands(commands[i]);
         }
     }
-
     return 0;
 }
