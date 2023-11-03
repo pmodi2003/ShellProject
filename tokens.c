@@ -2,46 +2,76 @@
 #include <string.h>
 #include <stdlib.h>
 #include "tokens.h"
+#include <stdio.h>
+#include <string.h>
 
-char **tokenize(char *input) {
-    char **tokens = (char **)malloc(MAX_TOKEN_LENGTH * sizeof(char *));
-    char *token = strtok(input, " \t\n");
-    int token_idx = 0;
+#define MAX_COMMANDS 100
 
-    while (token != NULL) {
-        tokens[token_idx] = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
-        if (token[0] == '"') {
-            char *result = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
-            if (result == NULL) {
-                fprintf(stderr, "Memory allocation failed\n");
-                exit(1);
-            }
-            strcpy(result, token + 1);
-            while (token[strlen(token) - 1] != '"') {
-                token = strtok(NULL, " \t\n");
-                if (token == NULL) {
-                    fprintf(stderr, "No closing quote found\n");
-                    char **error_token = (char **)malloc(2 * sizeof(char *));
-                    error_token[0] = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
-                    strcpy(error_token[0], "<error>");
-                    error_token[1] = NULL;
-                    return error_token;
-		}
-                strcat(result, " ");  
-                strcat(result, token);
-            }
-            // Remove the closing quote
-            result[strlen(result) - 1] = '\0';
-            strcpy(tokens[token_idx], result);
-            free(result);  
-        } else {
-            strcpy(tokens[token_idx], token);
-        }
-        token_idx++;
-        token = strtok(NULL, " \t\n");
+int special_tokens(char c) {
+    return (c == '(' || c == ')' || c == '<' || c == '>' || c == ';' || c == '|');
+}
+
+int read_tokens(char c) {
+    return (c != ' ' && c != '\t' &&  c != '\n' && !special_tokens(c));
+}
+
+int in_quotes(const char *input, char *output) {
+    int i = 0;
+    while (input[i] != '\0' && input[i] != '"') {
+        output[i] = input[i];
+        ++i;
     }
-    tokens[token_idx] = NULL;
-    return tokens;
+    output[i] = '\0';
+    ++i;
+    return i;
+}
+
+int stream(const char *input, char *output) {
+    int i = 0;
+    while (input[i] != '\0' && read_tokens(input[i])) {
+        output[i] = input[i];
+        ++i;
+    }
+    output[i] = '\0';
+    return i;
+}
+
+
+char **tokenize(char *tokens) {
+    char buf[MAX_TOKEN_LENGTH];
+    char **tokenArray = (char **)malloc(MAX_COMMANDS * sizeof(char *)); 
+    int token_idx = 0;
+    int i = 0;
+    while (tokens[i] != '\0') {
+        if (tokens[i] == '"') {
+            i++;
+            i += in_quotes(&tokens[i], buf);
+            tokenArray[token_idx] = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char)); 
+            strcpy(tokenArray[token_idx], buf);
+            token_idx++;
+            continue;
+        }
+
+        if (read_tokens(tokens[i])) {
+            i += stream(&tokens[i], buf);
+            tokenArray[token_idx] = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char)); 
+            strcpy(tokenArray[token_idx], buf); 
+            token_idx++;
+            continue;
+        }
+
+        if (special_tokens(tokens[i])) {
+            buf[0] = tokens[i];
+            buf[1] = '\0';
+            tokenArray[token_idx] = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char)); 
+            strcpy(tokenArray[token_idx], buf); 
+            token_idx++;
+        }
+
+        i++;
+    }
+    tokenArray[token_idx] = NULL; 
+    return tokenArray; 
 }
 
 void free_tokens(char **tokens) {

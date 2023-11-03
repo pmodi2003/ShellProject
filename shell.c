@@ -24,9 +24,9 @@ void execute_commands(char *command) {
     }
 
     if (strcmp(command, "prev") != 0) {
-	free(prev);
-	prev = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
-	strcpy(prev, command);
+        free(prev);
+        prev = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
+        strcpy(prev, command);
         tokens = tokenize(command);
     } else {
         if (prev  == NULL) {

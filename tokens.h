@@ -12,7 +12,7 @@
  */
 char **tokenize(char *input);
 /**
- * Frees given array of token strings created using tokenize()
+ * Frees given array of token strings created using tokenize
  *
  * Both array and non-null pointers need to be allocated 
  * using malloc
