@@ -18,6 +18,32 @@ void execute_commands(char *command) {
     char *output_file = NULL;
     int input_fd, output_fd;
 
+    if (strcmp(command, "exit") == 0) {
+        printf("Bye bye.\n");
+        exit(0);
+    }
+
+    if (strcmp(command, "prev") != 0) {
+	free(prev);
+	prev = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
+	strcpy(prev, command);
+        tokens = tokenize(command);
+    } else {
+        if (prev  == NULL) {
+            printf("No previous commands!\n");
+            return;
+        } else {
+    	    tokens = tokenize(prev);
+            int token_idx = 0;
+            while (tokens[token_idx] != NULL) {
+                printf("%s ", tokens[token_idx]);
+                token_idx++;
+            }
+            printf("\n");
+        }
+    }
+
+
     char *input_redirect = strchr(command, '<');
     if (input_redirect) {
         *input_redirect = '\0';
@@ -78,27 +104,6 @@ void execute_commands(char *command) {
         waitpid(pid, NULL, 0);
         waitpid(pid2, NULL, 0);
         return;
-    }
-
-    if (strcmp(command, "exit") == 0) {
-        printf("Bye bye.\n");
-        exit(0);
-    }
-
-    if (strcmp(command, "prev") != 0) {
-        tokens = tokenize(command);
-    } else {
-        if (tokens == NULL) {
-            printf("No previous commands!\n");
-            return;
-        } else {
-            int token_idx = 0;
-            while (tokens[token_idx] != NULL) {
-                printf("%s ", tokens[token_idx]);
-                token_idx++;
-            }
-            printf("\n");
-        }
     }
 
     if (strcmp(tokens[0], "<error>") == 0) {
