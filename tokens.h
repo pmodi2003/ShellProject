@@ -2,9 +2,10 @@
 #define TOKENS_H
 
 #define MAX_TOKEN_LENGTH 255
+#define MAX_COMMANDS 100
 
 /**
- * Splits given input string into tokens
+ * Split given input string into tokens
  *
  * @param input input string
  *
@@ -14,9 +15,9 @@ char **tokenize(char *input);
 /**
  * Frees given array of token strings created using tokenize
  *
- * Both array and non-null pointers need to be allocated 
+ * Both array and non-null pointers need to be allocated
  * using malloc
- * 
+ *
  * @param tokens null-terminated heap-allocated array of token strings
  */
 void free_tokens(char **tokens);

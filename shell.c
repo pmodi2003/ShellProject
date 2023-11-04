@@ -6,230 +6,299 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "tokens.h"
 
-#define MAX_COMMANDS 100
+static char *prev = NULL; // holds on to previous command
 
-static char *prev = NULL;
+/** Update previous command saved in memory **/
+void update_prev(char **command) {
+    free(prev);
+    prev = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
+    strcpy(prev, "");
+    while(*command != NULL){
+        strcat(prev, *command);
+        strcat(prev, " ");
+        command++;
+    }
+}
 
-void execute_commands(char *command) {
-    char **tokens = NULL;
-    char *input_file = NULL;
-    char *output_file = NULL;
-    int input_fd, output_fd;
+/** Goes through array and makes each character null **/
+void null_commands(char **commands) {
+    for (int i = 0; i < MAX_COMMANDS; i++) {
+        commands[i] = NULL;
+    }
+}
 
-    if (strcmp(command, "exit") == 0) {
-        printf("Bye bye.\n");
-        exit(0);
+/** Goes through input string and calls tokenizer on it
+ *
+ *  Checks for and handles sequencing (;) in input line
+ *
+ *
+ */
+void tokenize_input(char *input) {
+    char **command_itr;
+    char *commands[MAX_COMMANDS];
+    null_commands(&commands);
+    int command_idx = 0;
+
+    char **tokens = tokenize(input);
+    assert(tokens != NULL);
+
+    command_itr = tokens;
+    while (*command_itr != NULL) {
+        if (strcmp(*command_itr,";") == 0) {
+            command_idx++;
+            commands[command_idx] = NULL;
+            command_type(commands);
+            null_commands(&commands);
+            command_idx = 0;
+
+            command_itr++;
+            continue;
+        }
+
+        commands[command_idx] = *command_itr;
+        command_itr++;
+        command_idx++;
     }
 
-    if (strcmp(command, "prev") != 0) {
-        free(prev);
-        prev = (char *)malloc(MAX_TOKEN_LENGTH * sizeof(char));
-        strcpy(prev, command);
-        tokens = tokenize(command);
-    } else {
-        if (prev  == NULL) {
-            printf("No previous commands!\n");
-            return;
-        } else {
-    	    tokens = tokenize(prev);
-            int token_idx = 0;
-            while (tokens[token_idx] != NULL) {
-                printf("%s ", tokens[token_idx]);
-                token_idx++;
+    command_type(commands);
+    free_tokens(tokens);
+}
+
+/** Checks for and handles pipes & redirects in command
+ *
+ *  Executes command directly if no special command calls exist
+ */
+void command_type(char **commands) {
+    if (pipe_command(commands)) {
+        run_pipe(commands);
+    } else if (input_redirect_command(commands) == 1) {
+        run_redirect(commands, 0);
+    } else if (output_redirect_command(commands) == 1) {
+        run_redirect(commands, 1);
+}else {
+        exec_commands(commands);
+    }
+}
+
+/** Checks to see if command has a pipe operator **/
+int pipe_command(char **commands) {
+    for (int i = 0; commands[i] != NULL; i++) {
+        if (strcmp(commands[i], "|") == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/** Handles pipe execution **/
+void run_pipe(char **commands) {
+    char *left[MAX_COMMANDS];
+    char *right[MAX_COMMANDS];
+
+    for (int i = 0; commands[i] != NULL; i++) {
+        if (strcmp(commands[i], "|") == 0) {
+            null_commands(&left);
+            for (int j = 0; j < i; j++) {
+                left[j] = commands[j];
             }
-            printf("\n");
-        }
-    }
 
+            null_commands(&right);
+            for(int k = 0; commands[k+i+1] != NULL; k++) {
+                right[k] = commands[k+i+1];
+            }
 
-    char *input_redirect = strchr(command, '<');
-    if (input_redirect) {
-        *input_redirect = '\0';
-        input_redirect++;
-        while (*input_redirect == ' ') {
-            input_redirect++;
-        }
-        input_file = input_redirect;
-    }
+            int pipefd[2];
+            if (pipe(pipefd) == -1) {
+                perror("Pipe error");
+                exit(1);
+            }
 
-    char *output_redirect = strchr(command, '>');
-    if (output_redirect) {
-        *output_redirect = '\0';
-        output_redirect++;
-        while (*output_redirect == ' ') {
-            output_redirect++;
-        }
-        output_file = output_redirect;
-    }
+            int pid1 = fork();
 
-    char *pipe_operator = strchr(command, '|');
-    if (pipe_operator) {
-        *pipe_operator = '\0';
-        pipe_operator++;
-        while (*pipe_operator == ' ') {
-            pipe_operator++;
-        }
+            if(pid1 == 0) {
+                close(pipefd[0]);
+                dup2(pipefd[1], STDOUT_FILENO);
+                close(pipefd[1]);
+                command_type(left);
+                exit(1);
+            }
 
-        int pipefd[2];
-        if (pipe(pipefd) == -1) {
-            perror("Pipe error");
-            exit(1);
-        }
+            int pid2 = fork();
 
-        pid_t pid = fork();
-        if (pid == 0) {
-            close(pipefd[0]); 
-            dup2(pipefd[1], STDOUT_FILENO);
-            close(pipefd[1]);
+            if (pid2 == 0) {
+                close(pipefd[1]);
+                dup2(pipefd[0], STDIN_FILENO);
+                close(pipefd[0]);
+                command_type(right);
+                exit(1);
+            }
 
-            execute_commands(command); 
-            exit(0);
-        }
-
-        pid_t pid2 = fork();
-        if (pid2 == 0) {
-            close(pipefd[1]); 
-            dup2(pipefd[0], STDIN_FILENO); 
             close(pipefd[0]);
-
-            execute_commands(pipe_operator); 
-            exit(0);
+            close(pipefd[1]);
+            waitpid(pid1, NULL, 0);
+            waitpid(pid2, NULL, 0);
+            return;
         }
+    }
+}
 
-        close(pipefd[0]);
-        close(pipefd[1]);
+/** Checks to see if command has an input redirect operator **/
+int input_redirect_command(char **commands) {
+    for (int i = 0; commands[i] != NULL; i++) {
+        if (strcmp(commands[i], "<") == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
-        waitpid(pid, NULL, 0);
-        waitpid(pid2, NULL, 0);
+/** Checks to see if command has an output redirect operator **/
+int output_redirect_command(char **commands) {
+    for (int i = 0; commands[i] != NULL; i++) {
+        if (strcmp(commands[i], ">") == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/** Handles redirect execution **/
+void run_redirect(char **commands, int direction) {
+    char *redirect_commands[MAX_COMMANDS];
+    char *fileName = NULL;
+    for (int i = 0; commands[i] != NULL; i++) {
+        if (strcmp(commands[i], "<") == 0 || strcmp(commands[i], ">") == 0) {
+            if(commands[i+1] != NULL) {
+                fileName = commands[i + 1];
+                redirect_commands[i] = NULL;
+            } else {
+                printf("Redirect needs a file!\n");
+                return;
+            }
+            break;
+        }
+        redirect_commands[i] = commands[i];
+    }
+
+    int pid1 = fork();
+
+    if (pid1 == 0) {
+        if (direction == 0) { // INPUT REDIRECT
+            if (close(0) == -1) {
+                perror("Error closing stdin");
+                exit(1);
+            }
+            int fd = open(fileName, O_RDONLY);
+            assert(fd == 0);
+        } else { // OUTPUT REDIRECT
+            if (close(1) == -1) {
+                perror("Error closing stdout");
+                exit(1);
+            }
+
+            int fd = open(fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+            if (fd == -1) {
+                perror("Unable to open file!");
+                exit(1);
+            }
+            assert(fd == 1);
+        }
+        execvp(redirect_commands[0], redirect_commands);
+        exit(1);
+    } else {
+        waitpid(pid1, NULL, 0);
+    }
+
+}
+
+/** Handles command execution
+ *
+ *  Handles built-in commands as well executable commands
+ */
+void exec_commands(char **commands){
+
+    if (commands[0] == NULL) {
         return;
     }
 
-    if (strcmp(tokens[0], "<error>") == 0) {
-        free_tokens(tokens);
+    if (strcmp(commands[0], "exit") == 0) {
+        printf("Bye bye.\n");
+        free(prev);
+        exit(0);
+    } else if (strcmp(commands[0], "prev") == 0) {
+        if (prev != NULL) {
+            printf("%s\n", prev);
+            tokenize_input(prev);
+        } else {
+            printf("No previous commands!\n");
+        }
         return;
-    }
-
-
-    if (strcmp(tokens[0], "cd") == 0) {
-        if(chdir(tokens[1]) == -1){
-            if(tokens[1] == NULL || strcmp(tokens[1], "~") == 0){
+    } else if (strcmp(commands[0], "cd") == 0) {
+        if(chdir(commands[1]) == -1){
+            if(commands[1] == NULL || strcmp(commands[1], "~") == 0){
                 chdir("/home/user");
             } else {
-                char *directory = (char *)malloc(sizeof(char) * (strlen(tokens[1])+1));
+                char *directory = (char *)malloc(sizeof(char) * (strlen(commands[1])+1));
                 strcpy(directory, "/");
-                strcat(directory, tokens[1]);
-                if (chdir(directory) == -1) { 
+                strcat(directory, commands[1]);
+                if (chdir(directory) == -1) {
                     printf("Error changing directory\n");
                 }
             }
         }
-        return;
-    }
-
-
-    if (strcmp(tokens[0], "source") == 0) {
-        if (tokens[1] == NULL) {
-            printf("source: filename argument required\n");
-            return;
+    } else if (strcmp(commands[0], "source") == 0) {
+        FILE *source = fopen(commands[1], "r");
+        if (source == NULL) {
+            printf("Error trying to open %s\n", commands[1]);
         }
+        char line[MAX_TOKEN_LENGTH];
 
-        FILE *file = fopen(tokens[1], "r");
-        if (file == NULL) {
-            perror("source");
-            return;
+        while (fgets(line, MAX_TOKEN_LENGTH, source) != NULL) {
+            tokenize_input(line);
         }
-
-        char script_line[MAX_TOKEN_LENGTH];
-        while (fgets(script_line, MAX_TOKEN_LENGTH, file) != NULL) {
-            if (script_line[strlen(script_line) - 1] == '\n') {
-                script_line[strlen(script_line) - 1] = '\0';
-            }
-
-            char **script_tokens = tokenize(script_line);
-            pid_t pid = fork();
-            if (pid == 0) {
-                if (execvp(script_tokens[0], script_tokens) == -1) {
-                    fprintf(stderr, "%s: command not found\n", script_tokens[0]);
-                    exit(1);
-                }
-            } else {
-                waitpid(pid, NULL, 0);
-            }
-
-            free_tokens(script_tokens);
-        }
-
-        fclose(file);
-        return;
-    }
-
-
-	if (strcmp(tokens[0], "help") == 0) {
-	    if (tokens[1] == NULL) {
-                printf("Help command requires a built-in command argument\n"
-                       "Built-in Arguments:\n	exit\n	prev\n	cd\n	source\n	help\n");
-	    } else if (strcmp(tokens[1], "exit") == 0){
-		printf("exit: exit\n"
-			"	Exit the shell.\n");
-	    } else if (strcmp(tokens[1], "prev") == 0) {
-		printf("prev: prev\n"
-			"	Change the shell working directory.\n\n"
-			"	Change the current directory to DIR.  The default DIR is the value of the HOME shell variable.\n");
-	    } else if (strcmp(tokens[1], "cd") == 0) {
-                printf("cd: cd [dir]\n"
-			"	Change the shell working directory.\n\n"
-			"	Change the current directory to DIR. The default DIR is the value of the HOME shell variable.\n");
-	    } else if (strcmp(tokens[1], "source") == 0) {
-                printf("source: source filename\n"
-			"	Execute commands from a file in the current shell.\n\n"
-			"	Read and execute commands from FILENAME in the current shell.\n");
-	    } else if (strcmp(tokens[1], "help") == 0) {
-                printf("help: help [command]\n"
-			"	Display information about builtin commands.\n\n"
-			"	Displays brief summaries of builtin commands.\n");
-	    } else {
-		printf("%s is not a built-in command!\n", tokens[1]);
-	    }
-	    return;
-	}
-
-
-    pid_t pid = fork();
-    if (pid == 0) {
-         if (input_file) {
-            input_fd = open(input_file, O_RDONLY);
-            if (input_fd == -1) {
-                perror("Input file error");
-                exit(1);
-            }
-            dup2(input_fd, STDIN_FILENO);
-            close(input_fd);
-        }
-
-        if (output_file) {
-            output_fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-            if (output_fd == -1) {
-                perror("Output file error");
-                exit(1);
-            }
-            dup2(output_fd, STDOUT_FILENO);
-            close(output_fd);
-        }
-
-        if (execvp(tokens[0], tokens) == -1) {
-            fprintf(stderr, "%s: command not found\n", tokens[0]);
-            exit(1);
+    } else if (strcmp(commands[0], "help") == 0) {
+        if (commands[1] == NULL) {
+            printf("Help command requires a built-in command argument\n"
+                   "Built-in Arguments:\n       exit\n  prev\n  cd\n    source\n        help\n");
+        } else if (strcmp(commands[1], "exit") == 0){
+            printf("exit: exit\n"
+                   "    Exit the shell.\n");
+        } else if (strcmp(commands[1], "prev") == 0) {
+            printf("prev: prev\n"
+                   "    Change the shell working directory.\n\n"
+                   "    Change the current directory to DIR.  The default DIR is the value of the HOME shell variable.\n");
+        } else if (strcmp(commands[1], "cd") == 0) {
+            printf("cd: cd [dir]\n"
+                   "    Change the shell working directory.\n\n"
+                   "    Change the current directory to DIR. The default DIR is the value of the HOME shell variable.\n");
+        } else if (strcmp(commands[1], "source") == 0) {
+            printf("source: source filename\n"
+                   "    Execute commands from a file in the current shell.\n\n"
+                   "    Read and execute commands from FILENAME in the current shell.\n");
+        } else if (strcmp(commands[1], "help") == 0) {
+            printf("help: help [command]\n"
+                   "    Display information about builtin commands.\n\n"
+                   "    Displays brief summaries of builtin commands.\n");
+        } else {
+            printf("%s is not a built-in command!\n", commands[1]);
         }
     } else {
-        waitpid(pid, NULL, 0);
+        int child_pid = fork();
+        if (child_pid == 0) {
+            execvp(commands[0], commands);
+            fprintf(stderr, "%s: command not found\n", commands[0]);
+            exit(1);
+        } else {
+            waitpid(child_pid, NULL, 0);
+        }
     }
-    free_tokens(tokens);
-
-    return;
+    update_prev(commands);
 }
 
+/** Obtains input and executes input from shell **/
 int main(int argc, char **argv) {
     printf("Welcome to mini-shell.\n");
 
@@ -240,25 +309,12 @@ int main(int argc, char **argv) {
         printf("shell $ ");
         if (fgets(input, MAX_TOKEN_LENGTH, stdin) == NULL) {
             printf("\nBye bye.\n");
-            break;
+            free(prev);
+            return 0;
         }
 
-        if (input[strlen(input) - 1] == '\n') {
-            input[strlen(input) - 1] = '\0';
-        }
-
-        int num_commands = 0;
-        char *command = strtok(input, ";");
-        while (command != NULL) {
-            commands[num_commands] = command;
-            num_commands++;
-            command = strtok(NULL, ";");
-        }
-
-        for (int i = 0; i < num_commands; i++) {
-            execute_commands(commands[i]);
-        }
+        tokenize_input(input);
     }
-
+    free(prev);
     return 0;
 }
