@@ -301,12 +301,13 @@ void exec_commands(char **commands){
 /** Obtains input and executes input from shell **/
 int main(int argc, char **argv) {
     printf("Welcome to mini-shell.\n");
-
+    fflush(stdout);
     char input[MAX_TOKEN_LENGTH];
     char *commands[MAX_COMMANDS];
 
     while (1) {
         printf("shell $ ");
+	fflush(stdout);
         if (fgets(input, MAX_TOKEN_LENGTH, stdin) == NULL) {
             printf("\nBye bye.\n");
             free(prev);
